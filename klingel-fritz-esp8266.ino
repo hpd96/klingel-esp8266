@@ -58,9 +58,9 @@ const char* mqtt_topic_zeit = "tuer/klingel/zeit";
 
 
 //Your Wifi SSID
-const char* ssid = "3A-peter@demus.de";
+const char* ssid = "....";
 //Your Wifi Key
-const char* password = "lothar2602lothar2602";
+const char* password = "....";
 
 const char* update_path = "/firmware";
 const char* update_username = "admin";
@@ -86,7 +86,7 @@ const char* statusmeldung[] = { "Fehler", "Ruhe", "Klingel" };
 
 int status = AUS;
 
-bool SendUpdate = true;
+bool SendUpdate = false;
 
 Ticker ticker;
 
@@ -243,7 +243,7 @@ void setup(void) {
 
   MDNS.addService("http", "tcp", 80);
 
-  Serial.printf("HTTPUpdateServer ready! \n  Open http://%s.local%s in your browser and\n login with username '%s' and password '%s'\n", mqtt_client_id, update_path, update_username, update_password);
+  Serial.printf("HTTPUpdateServer ready! \n  Open http://%s.local%s in your browser and\n  login with username '%s' and password '%s'\n", mqtt_client_id, update_path, update_username, update_password);
   Serial.printf("\nSketch version: %s\n", sVersion);
 
 
@@ -251,7 +251,9 @@ void setup(void) {
   client.setCallback(MqttCallback);
   MqttReconnect();
   client.publish(mqtt_topic_version, sVersion);
-  
+
+  Serial.println("first mqtt status update");
+  client.publish(mqtt_topic_status, statusmeldung[status]);
 
   httpServer.on("/", []() {
     statusTor();
@@ -273,7 +275,7 @@ void setup(void) {
   httpServer.on("/status", []() {
     long lRssi = WiFi.RSSI();
     char sBuffer[150];
-    sprintf(sBuffer, "WiFi  RSSI = %d dBm\r\nVersion = %s\r\letztes Klingel vor %d min\r\nAnzahl Klingeln = %d\r\n", lRssi, sVersion, (millis() - lLastChangeUpdateSend) / 60000 , lCountKlingel);
+    sprintf(sBuffer, "WiFi  RSSI = %d dBm \r\nVersion = %s \r\nletztes Klingel vor %d min \r\nAnzahl Klingeln = %d\r\n", lRssi, sVersion, (millis() - lLastChangeUpdateSend) / 60000 , lCountKlingel);
 
     Serial.println( sBuffer ); // dbg
 
@@ -283,9 +285,10 @@ void setup(void) {
   });
 
 
-
   //Check the klingel status every 50 millisecond
   ticker.attach_ms( 50, CheckDoorStatus);
+
+  digitalWrite(gpioLed, (status != AN) ); // LED on bei Klingel
 
 }
 
@@ -297,22 +300,23 @@ void loop(void) {
   if (!client.connected()) { MqttReconnect(); }
   client.loop();
 
-  if (millis() - lLastStatusUpdateSend >  lDeltaStatusUpdateSend) {
+  if ( ( millis() - lLastStatusUpdateSend ) >  lDeltaStatusUpdateSend) {
     Serial.print("still running since ");
     Serial.print(millis()/lDeltaStatusUpdateSend);
     Serial.println(" minutes");
     lLastStatusUpdateSend = millis();
-    SendUpdate = true;
+    client.publish(mqtt_topic_status, statusmeldung[status]);
   }
 
   if (SendUpdate)
   {
-    Serial.print("mqtt status update: ");
+    Serial.print("status update: ");
     Serial.println(statusmeldung[status]);
     // not more than one message per minute?
-    if ( millis() - lLastChangeUpdateSend > lDeltaChangeUpdateSend )
+    if ( (( millis() - lLastChangeUpdateSend ) > lDeltaChangeUpdateSend ) || ( status == AUS ) )
     {
         lLastChangeUpdateSend = millis();
+        Serial.println("mqtt status update");
         client.publish(mqtt_topic_status, statusmeldung[status]);
     } else {
         Serial.println("letztes Klingeln war gerade!");
