@@ -1,0 +1,8 @@
+
+String HausTorKlingelStatus  "Haustür Klingel [%s]"   <alarm>      (gTuer) {mqtt="<[tux:tuer/klingel/status:state:default]"}
+DateTime HausTorKlingel_wann "letztes Mal geklingelt [%1$td.%1$tm %1$tH:%1$tM]" <alarm>
+
+Switch HausTorKlingelAktiv  "Haustür Klingel aktiv"   <switch>      (gTuer) { expire="20h, command=ON" }
+
+String HausTorKlingelVersion  "Klingel Version [%s]"   <frontdoor>      (gTuer) {mqtt="<[tux:tuer/klingel/version:state:default]"}
+String HausTorKlingelWiFi  "Klingel Wifi  [%s]"   <frontdoor>      (gTuer) {mqtt="<[tux:tuer/klingel/wifi:state:default]"}

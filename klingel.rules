@@ -1,0 +1,52 @@
+var Timer GaragenTorAuf_timer = null
+val int timeoutMinutes = 10 // choose an appropriate value
+
+rule "Send telegram Haustür Klingel"
+
+when
+
+	Item HausTorKlingelStatus changed
+
+then	
+
+  logInfo("Klingelstatus changed", HausTorKlingelStatus.state.toString)
+
+
+  if ( HausTorKlingelStatus.state.toString.toLowerCase == "klingel" ) 
+  {
+ 	sendTelegram("n3a_smarthome", "__Klingel__: *Haustuer* \ud83c\udfe0 " )
+
+        HausTorKlingel_wann.postUpdate(new DateTimeType())
+
+	if ( HausTorKlingelAktiv.state.toString.toLowerCase == "on" ) 
+	{
+        	var String result = executeCommandLine( "/home/peter/sipcmd-fritzbox/bretschneider/n3a-dect-gruppe.sh", 10000)
+        	logInfo("Exec HaustuerKlingel SIPCMD", "Results bretschneider script:\n" + result)
+	}
+	else
+	{
+        	logInfo("Exec HaustuerKlingel SIPCMD", "leise deaktiviert")
+	}
+
+  }
+  if ( HausTorKlingelStatus.state.toString.toLowerCase == "fehler" ) 
+  {
+ 	sendTelegram("n3a_smarthome", "__Klingel__: *Haustuer* Fehler" )
+  }
+
+
+end
+
+
+rule "Set Default Values klingel"
+when
+    System started
+then
+    Thread::sleep(70 * 1000) // let persistance finish restoring a few seconds
+
+    if (HausTorKlingelAktiv.state == NULL) HausTorKlingelAktiv.postUpdate('ON')
+
+end
+
+
+
